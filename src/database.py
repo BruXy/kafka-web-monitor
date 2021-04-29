@@ -6,9 +6,6 @@ PostreSQL Handling functions
 
 import psycopg2
 from psycopg2.extras import NamedTupleCursor
-#import read_config as rc
-
-DEBUG = True
 
 # Storing of sites, primary key is configuration section id
 
@@ -23,14 +20,14 @@ CREATE TABLE IF NOT EXISTS sites (
 # Insert record to sites, update URL when changed in the config
 
 TABLE_SITES_RECORD = """
-INSERT INTO sites (url, storage) VALUES ('{0}', '{1}')
-ON CONFLICT (storage) DO UPDATE SET url = '{0}';
+INSERT INTO sites (url, storage) VALUES (%s, %s)
+ON CONFLICT (storage) DO UPDATE SET url = %s;
 """
 
 # Each site will have separate table for the log storage
 
 TABLE_LOGS = """
-CREATE TABLE IF NOT EXISTS {0} (
+CREATE TABLE IF NOT EXISTS {} (
     id SERIAL PRIMARY KEY,
     site_id varchar NOT NULL,
     FOREIGN KEY (site_id) REFERENCES sites(storage),
@@ -45,7 +42,7 @@ CREATE TABLE IF NOT EXISTS {0} (
 
 INSERT_STATUS = """
 INSERT INTO {} (site_id, time, http_status, response_time_ms, regex_match)
-    VALUES('{}', '{}', {}, {}, {});
+    VALUES(%s, %s, %s, %s, %s);
 """
 
 
@@ -87,7 +84,7 @@ def connection(config):
 
 
 def init(db_conn, db_cfg_list):
-    """Create tables if they do not exist yet.
+    """Create/update tables if they do not exist yet.
 
     :param db_conn: connection to the PostgreSQL
     :type db_conn: psycopg2 connection object
@@ -102,7 +99,7 @@ def init(db_conn, db_cfg_list):
     # update sites table and create tables for metrics storage
     for db, cfg in db_cfg_list.items():
         # insert/update sites
-        cursor.execute(TABLE_SITES_RECORD.format(cfg['url'], db))
+        cursor.execute(TABLE_SITES_RECORD, (cfg['url'], db, cfg['url']))
         # create log stream tables
         cursor.execute(TABLE_LOGS.format(db))
 
@@ -110,7 +107,8 @@ def init(db_conn, db_cfg_list):
     cursor.close()
 
 
-def insert_status(cursor, table, site_id, timestamp, http_status, response_time_ms, regex_match):
+def insert_status(cursor, table, site_id,
+                  timestamp, http_status, response_time_ms, regex_match):
     """Save monitoring record to the database.
 
         :param cursor: PostgreSQL cursor
@@ -123,8 +121,6 @@ def insert_status(cursor, table, site_id, timestamp, http_status, response_time_
         :param regex_match:
     """
 
-    query = INSERT_STATUS.format(
-        table, site_id, timestamp, http_status, response_time_ms, regex_match)
-    if DEBUG:
-        print(query)
-    cursor.execute(query)
+    query = INSERT_STATUS.format(table)
+    data = (site_id, timestamp, http_status, response_time_ms, regex_match)
+    cursor.execute(query, data)
