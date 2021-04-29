@@ -1,19 +1,22 @@
 #
 # Development support commands
 #
+SHELL := /bin/bash
 
 FEDORA_PACKAGES = libpq-devel # needed for psycopg2
 FEDORA_PACKAGES += postgres   # psql client
+FEDORA_PACKAGES += pylint     # static code analysis tool
 
 PYTHON_VENV_DIR = ./kafka
 
-.PHONY: venv freeze pip-install dev-install syntax test
+.PHONY: venv freeze pip-install dev-install syntax test static
+.ONESHELL:
 
 default: syntax test
 
 venv:
 	python3 -m venv ${PYTHON_VENV_DIR}
-	@echo "Activate:" source ${PYTHON_VENV_DIR}/bin/activate
+	exec $(notdir $(SHELL))  -c 'source ${PYTHON_VENV_DIR}/bin/activate; bash -i'
 
 freeze:
 	pip freeze > requirements.txt
@@ -45,4 +48,6 @@ test:
 			python $$i >& /dev/null && echo "OK" || ( echo "ERROR"; exit 1 ); \
 		done
 
+# Static analysis
+static:
 

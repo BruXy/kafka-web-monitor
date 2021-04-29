@@ -1,7 +1,15 @@
+"""
+Read configuration file
+=======================
+"""
+
 import configparser
 
 CONFIG_FILE = ''
-CONFIG = None
+
+CONFIG = None # ConfigParser object
+
+# Global configuration sections
 CONFIG_ID_KAFKA = 'global-kafka'
 CONFIG_ID_POSTGRESQL = 'global-postgres'
 
@@ -13,7 +21,7 @@ def config_init(config_file):
        :param config_file: Path to configuration file.
        :type config_file: string
     """
-    global CONFIG
+    global CONFIG, CONFIG_FILE
     CONFIG = configparser.ConfigParser()
     CONFIG.read(config_file)
 
@@ -25,15 +33,27 @@ def config_init(config_file):
     if CONFIG_ID_POSTGRESQL not in CONFIG.sections():
         raise Exception(err.format(CONFIG_ID_POSTGRESQL))
 
-    pass
-
+    CONFIG_FILE = config_file
 
 def read_section(section):
     """Read [section] values from configuration file."""
-    return dict(CONFIG[section])
+    cfg_section = CONFIG[section]
+
+    # Check if optional parameters are set:
+    if 'html_regex' not in cfg_section:
+        cfg_section['html_regex'] = ''
+
+    return dict(cfg_section)
 
 
 def config_websites():
+    """Read website configuration sections and return dictonary
+       will all settings.
+
+        :rtype: dict
+        :return: dictonary, key: config section, value: settings.
+    """
+
     # need only websites
     websites = (CONFIG.sections()).copy()
     websites.remove(CONFIG_ID_KAFKA)
@@ -42,8 +62,9 @@ def config_websites():
     # Check for duplicate Ids
     if len(websites) != len(set(websites)):
         raise Exception('Duplicate websites sections!')
-    else:
-        web_list = dict()
-        for section in websites:
-            web_list[section] = read_section(section)
-        return web_list
+
+    # Create output dictionary
+    web_list = dict()
+    for section in websites:
+        web_list[section] = read_section(section)
+    return web_list

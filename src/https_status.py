@@ -4,11 +4,11 @@ Website status monitoring
 
 """
 
-import requests
 import re
+import requests
 
 _AGENT = 'Kafka-Web-Monitor/1.0'  # identify our requests in server logs
-
+DEBUG = False
 
 def html_regex(re_obj, html):
     """ Check if page contains given regex pattern.
@@ -21,7 +21,7 @@ def html_regex(re_obj, html):
     @return: True if matched, False
     @rtype: bool
     """
-    return True if re_obj.search(html) else False
+    return bool(re_obj.search(html))
 
 
 def url_status(url, connect_timeout, read_timeout, re_obj=None):
@@ -47,23 +47,26 @@ def url_status(url, connect_timeout, read_timeout, re_obj=None):
         response = requests.get(url,
                                 headers={
                                     'user-agent': _AGENT,
-                                    #                'Accept': 'application/json'
                                 },
                                 timeout=(connect_timeout, read_timeout)
                                 )
-    except requests.exceptions.ConnectionError as e:
-        print('Error: Connection to "{}" failed: {}'.format(url, e))
+    except requests.exceptions.ConnectionError as err:
+        print('Error: Connection to "{}" failed: {}'.format(url, err))
 
     if response:
         response_time = response.elapsed.microseconds * 1e-3
         http_status = response.status_code
-        print('Time: {}ms'.format(response_time))
-        print('Status: ', http_status)
-        print('Content: ', response.content.decode())
+        if DEBUG:
+            print('Time: {}ms'.format(response_time))
+            print('Status: ', http_status)
+            print('Content: ', response.content.decode())
         if re_obj:
             regex_match = html_regex(re_obj, response.text)
-            print('Regex Match: ', regex_match)
-    else:
+            if DEBUG:
+                print('Regex Match: ', regex_match)
+        else:
+            regex_match = None
+    else: # there was connection error => no response
         http_status = 0
         response_time = 0
         regex_match = None
