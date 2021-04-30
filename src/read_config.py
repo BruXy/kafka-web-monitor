@@ -3,9 +3,8 @@ Read configuration file
 =======================
 """
 
+import sys
 import configparser
-
-CONFIG_FILE = ''
 
 CONFIG = None # ConfigParser object
 
@@ -21,7 +20,7 @@ def config_init(config_file):
        :param config_file: Path to configuration file.
        :type config_file: string
     """
-    global CONFIG, CONFIG_FILE
+    global CONFIG
     CONFIG = configparser.ConfigParser()
     CONFIG.read(config_file)
 
@@ -33,7 +32,8 @@ def config_init(config_file):
     if CONFIG_ID_POSTGRESQL not in CONFIG.sections():
         raise Exception(err.format(CONFIG_ID_POSTGRESQL))
 
-    CONFIG_FILE = config_file
+    return CONFIG
+
 
 def read_section(section):
     """Read [section] values from configuration file."""
@@ -68,3 +68,19 @@ def config_websites():
     for section in websites:
         web_list[section] = read_section(section)
     return web_list
+
+def parse_cli(argv):
+    """Get configuration file from CLI 1st argument.
+
+        :param argv: argument list
+        :type argv: sys.argv
+    """
+
+    if len(argv) != 2:
+        err_msg = "Command-line option needed!\n"
+        err_msg += "\nUsage:"
+        err_msg += "\n\t{} config_file\n".format(argv[0])
+        print(err_msg, file=sys.stderr)
+        sys.exit(1)
+
+    return argv[1]

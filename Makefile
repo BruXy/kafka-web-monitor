@@ -2,6 +2,7 @@
 # Development support commands
 #
 SHELL := /bin/bash
+SHELL_FLAGS := set -ue -o pipefail
 
 FEDORA_PACKAGES = libpq-devel # needed for psycopg2
 FEDORA_PACKAGES += postgres   # psql client
@@ -10,7 +11,6 @@ FEDORA_PACKAGES += pylint     # static code analysis tool
 PYTHON_VENV_DIR = ./kafka
 
 .PHONY: venv freeze pip-install dev-install syntax test static
-.ONESHELL:
 
 default: syntax test
 
@@ -30,7 +30,7 @@ dev-install:
 # Check syntax of all Python sources but ignore PYTHON_VENV_DIR folder.
 
 syntax:
-	@set -ue -o pipefail; \
+	@${SHELL_FLAGS}; \
 		for i in $$(find . -path ${PYTHON_VENV_DIR} -prune -false -o -name '*.py'); \
 		do \
 			echo -ne "$$i:\t"; \
@@ -41,7 +41,7 @@ syntax:
 # Unit tests
 
 test:
-	@set -ue -o pipefail; cd tests; \
+	@${SHELL_FLAGS}; cd tests; \
 		for i in test*.py; \
 		do \
 			echo -ne "Test case: $$i "; \
@@ -49,5 +49,8 @@ test:
 		done
 
 # Static analysis
+
 static:
+	@${SHELL_FLAGS}; \
+		${PYTHON_VENV_DIR}/bin/pylint src/*.py tests/*.py;
 

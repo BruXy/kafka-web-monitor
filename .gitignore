@@ -1,0 +1,7 @@
+monitor.conf
+psql.sh
+*.pyc
+**.pyc
+__pycache__/
+certs/*
+

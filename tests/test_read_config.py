@@ -15,7 +15,7 @@ expected = {
     't2': {
         'url': 't2',
         'period': '30',
-        'html_regex': 'None',
+        'html_regex': '',
         'connect_timeout': '3',
         'read_timeout': '30',
     }
@@ -24,6 +24,7 @@ expected = {
 rc.config_init('test-monitor.conf')
 retval = rc.config_websites()
 print(retval)
+print(expected)
 
 assert retval == expected
 

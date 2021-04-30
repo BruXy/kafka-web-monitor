@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Kafka Consumer
 ==============
@@ -5,15 +6,18 @@ Kafka Consumer
 https://help.aiven.io/en/articles/489572-getting-started-with-aiven-for-apache-kafka
 
 """
+import sys
+from json import loads
 
 from kafka import KafkaConsumer
 from kafka.errors import KafkaError
 
-import read_config as rc
-import database as db
-from sys import exit
-from json import loads
+import src.read_config as rc
+import src.database as db
 
+DEBUG = True
+KAFKA_GROUP_ID = 'bruxy-topic'
+KAFKA_CLIENT_ID = 'bruxy-consumer'
 
 def consumer_init(config):
     """KafkaConsumer initialization.
@@ -28,8 +32,8 @@ def consumer_init(config):
             config['topic'],
             auto_offset_reset="earliest",
             bootstrap_servers=config['host'] + ':' + config['port'],
-            client_id="bruxy-consumer",  # do I need this?
-            group_id="bruxy-topic",
+            client_id=KAFKA_CLIENT_ID,  # do I need this?
+            group_id=KAFKA_GROUP_ID,
             security_protocol=config['security_protocol'],
             ssl_cafile=config['ssl_cafile'],
             ssl_certfile=config['ssl_certfile'],
@@ -57,21 +61,17 @@ def message2db(cursor, msg_bytes):
     """
     msg = loads(msg_bytes)
 
-    if msg['regex_match'] == None:
-        regex_match = 'NULL'
-    else:
-        regex_match = msg['regex_match']
-
     db.insert_status(cursor, msg['site_id'], msg['site_id'],
                      msg['timestamp'],
                      msg['http_status'],
                      int(msg['response_time'] * 1000),
-                     regex_match)
+                     msg['regex_match'])
 
 
-def main():
+def main(argv):
     # Read configuration
-    rc.config_init('monitor.conf')
+    config_file = rc.parse_cli(argv)
+    rc.config_init(config_file)
     cfg_kafka = rc.read_section(rc.CONFIG_ID_KAFKA)
     cfg_postgres = rc.read_section(rc.CONFIG_ID_POSTGRESQL)
 
@@ -82,21 +82,23 @@ def main():
 
     # KafkaConsumer, message reception
     kafka_consumer = consumer_init(cfg_kafka)
-    # Call poll twice. First call will just assign partitions for our
-    # consumer without actually returning anything
-    for _ in range(2):
-        raw_msgs = kafka_consumer.poll(timeout_ms=1000)
-        for tp, msgs in raw_msgs.items():
-            for msg in msgs:
-                print("Received: {}".format(msg.value))
-                message2db(db_cursor, msg.value)
 
-    #message2db(db_cursor, b'{"site_id": "ifconfig", "timestamp": "2021-04-28 23:27:55.471290", "http_status": 200, "response_time": 187.036, "regex_match": true}')
-    # Commit offsets so we won't get the same messages again
-    # Note: there should be also default autocommit every 5000ms '?'
-    kafka_consumer.commit()
-    # '?' do I need to close consumer explicitely?
+    print('Consumer executed, press Ctrl-c to exit...')
+    while True:
+        try:
+            for msg in kafka_consumer:
+                if DEBUG:
+                    print("Received: {}".format(msg.value))
+                message2db(db_cursor, msg.value)
+        except KeyboardInterrupt:
+            print('Exiting consumer...')
+            # Clean up...
+            kafka_consumer.commit()
+            kafka_consumer.close()
+            db_cursor.close()
+            psql.close()
+            sys.exit(0)
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv)
