@@ -11,7 +11,7 @@ This is a website monitoring tool using Apache Kafka messaging framework.
 * `producer.py` collects metrics and sends them via Kafka to
 * `consumer.py` which stores the received message to the PostgreSQL database.
 
-To run producer/customer use (exit with `Ctrl-c`):
+To run producer/consumer use (exit with `Ctrl-c`):
 
 ```
 ./producer.py monitor.conf
