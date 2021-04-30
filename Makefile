@@ -52,5 +52,5 @@ test:
 
 static:
 	@${SHELL_FLAGS}; \
-		${PYTHON_VENV_DIR}/bin/pylint src/*.py tests/*.py;
+		${PYTHON_VENV_DIR}/bin/pylint {src/,tests/,./}*.py;
 
